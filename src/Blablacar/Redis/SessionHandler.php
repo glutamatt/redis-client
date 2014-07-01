@@ -12,6 +12,7 @@ class SessionHandler implements \SessionHandlerInterface
     protected $spinLockWait;
     protected $lockMaxWait;
     protected $lockKey;
+    protected $readOnly;
 
     /**
      * __construct
@@ -24,7 +25,7 @@ class SessionHandler implements \SessionHandlerInterface
      *
      * @return void
      */
-    public function __construct(Client $client, $prefix = 'session', $ttl = null, $spinLockWait = 150000, $lockMaxWait = 30000000)
+    public function __construct(Client $client, $prefix = 'session', $ttl = null, $spinLockWait = 150000, $lockMaxWait = 30000000, $readOnly = false)
     {
         $this->client       = $client;
         $this->prefix       = $prefix;
@@ -33,6 +34,7 @@ class SessionHandler implements \SessionHandlerInterface
         $this->lockMaxWait  = $lockMaxWait;
         $this->lockKey      = null;
         $this->isLocked     = false;
+        $this->readOnly     = $readOnly;
     }
 
     /**
@@ -41,6 +43,11 @@ class SessionHandler implements \SessionHandlerInterface
     public function __destruct()
     {
         $this->close();
+    }
+
+    public function setReadOnly($readOnly)
+    {
+        $this->readOnly = $readOnly;
     }
 
     /**
@@ -63,6 +70,10 @@ class SessionHandler implements \SessionHandlerInterface
      */
     public function write($sessionId, $data)
     {
+        if ($this->readOnly) {
+            return true;
+        }
+
         $this->lock($sessionId);
 
         if (null === $this->ttl) {
@@ -127,7 +138,7 @@ class SessionHandler implements \SessionHandlerInterface
      */
     protected function lock($sessionId)
     {
-        if (true === $this->isLocked) {
+        if (true === $this->isLocked || $this->readOnly) {
             return true;
         }
 

@@ -130,4 +130,22 @@ class SessionHandlerTest extends \PHPUnit_Framework_TestCase
         $this->setExpectedException('Blablacar\Redis\Exception\LockException');
         $handler->write('lock_fail', 'value');
     }
+
+    public function test_read_when_read_only()
+    {
+        $client = $this->prophet->prophesize('Blablacar\Redis\Test\Client');
+        $client->get(Argument::any('string'))->shouldBeCalledTimes(1);
+        $client->set(Argument::any('string'))->shouldBeCalledTimes(0);
+        $handler = new SessionHandler($client->reveal(), 'ro', null, 1, 1, true);
+        $handler->read('id');
+    }
+
+    public function test_write_when_read_only()
+    {
+        $client = $this->prophet->prophesize('Blablacar\Redis\Test\Client');
+        $client->get(Argument::any('string'))->shouldBeCalledTimes(0);
+        $client->set(Argument::any('string'))->shouldBeCalledTimes(0);
+        $handler = new SessionHandler($client->reveal(), 'ro', null, 1, 1, true);
+        $handler->write('id', 'val');
+    }
 }
